@@ -637,25 +637,25 @@
     </div>
     
     <script>
-        function updateWeek() {
-            const week = document.getElementById('week-select').value;
-            const intervalProtocol = document.getElementById('interval-protocol');
-            
-            if (week <= 2) {
-                intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 6×2min hard @ RPE 8-9, 2min easy</p>';
-            } else if (week <= 6) {
-                intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 5×3min hard, 2min easy</p>';
-            } else if (week == 7) {
-                intervalProtocol.innerHTML = '<p><strong>Deload Week:</strong> 4×2min easy @ RPE 6-7, 2min easy</p>';
-            } else {
-                intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 4×4min hard, 2min easy</p>';
-            }
-        }
-        
-        // Google Sheets Configuration
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDrZyKIm0kRuomvyCKKOF1mLaavh2-rp9Ulv3JDNdfF79sdncM_pXrt7ksYSa6N_0/exec'; // Replace with your Apps Script URL
-        
-       function syncToSheets(exercise, weight, completed) {
+function updateWeek() {
+    const week = document.getElementById('week-select').value;
+    const intervalProtocol = document.getElementById('interval-protocol');
+    
+    if (week <= 2) {
+        intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 6×2min hard @ RPE 8-9, 2min easy</p>';
+    } else if (week <= 6) {
+        intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 5×3min hard, 2min easy</p>';
+    } else if (week == 7) {
+        intervalProtocol.innerHTML = '<p><strong>Deload Week:</strong> 4×2min easy @ RPE 6-7, 2min easy</p>';
+    } else {
+        intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 4×4min hard, 2min easy</p>';
+    }
+}
+
+// Google Sheets Configuration
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDrZyKIm0kRuomvyCKKOF1mLaavh2-rp9Ulv3JDNdfF79sdncM_pXrt7ksYSa6N_0/exec';
+
+function syncToSheets(exercise, weight, completed) {
     const week = document.getElementById('week-select').value;
     const data = {
         week: week,
@@ -666,7 +666,7 @@
         completed: completed ? 'Yes' : 'No'
     };
     
-    console.log('Syncing data:', data); // Debug line
+    console.log('Syncing data:', data);
     
     fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
@@ -719,191 +719,154 @@ function exportToSheets() {
     
     alert('CSV downloaded! Import this into your Google Sheet.');
 }
-            
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).catch(err => console.log('Sync failed:', err));
+
+function saveAsHTML() {
+    const htmlContent = document.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const week = document.getElementById('week-select').value;
+    a.href = url;
+    a.download = `workout-tracker-week-${week}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Auto-save to localStorage
+function saveData() {
+    const inputs = document.querySelectorAll('input, select, textarea');
+    const data = {};
+    inputs.forEach((input, index) => {
+        if (input.type === 'checkbox') {
+            data[index] = input.checked;
+        } else {
+            data[index] = input.value;
         }
-            const week = document.getElementById('week-select').value;
-            const data = [];
-            
-            // Header row
-            data.push(['Week', 'Day', 'Exercise', 'Weight_kg', 'Completed', 'Notes']);
-            
-            // Collect workout data
-            const workouts = [
-                { day: 'Monday', exercises: ['Barbell Bench Press', 'Chest-Supported Row', 'Incline DB Press', 'Seated Cable Row', 'Cable Lateral Raise', 'Rope Pressdown'] },
-                { day: 'Wednesday', exercises: ['Back/Hack Squat', 'Romanian Deadlift', 'Bulgarian Split Squat', 'Leg Curl', 'Cable Crunch', 'Side Plank'] },
-                { day: 'Friday', exercises: ['Weighted Pull-up/Lat Pulldown', 'Overhead Press', 'Flat DB Press', 'Chest-Supported Row', 'Cable Lateral Raise', 'DB Hammer Curl', 'Overhead Cable Triceps'] }
-            ];
-            
-            const weightInputs = document.querySelectorAll('.weight-input');
-            const checkboxes = document.querySelectorAll('.completed-checkbox');
-            let inputIndex = 0;
-            
-            workouts.forEach(workout => {
-                workout.exercises.forEach(exercise => {
-                    const weight = weightInputs[inputIndex]?.value || '';
-                    const completed = checkboxes[inputIndex]?.checked ? 'Yes' : 'No';
-                    data.push([week, workout.day, exercise, weight, completed, '']);
-                    inputIndex++;
-                });
-            });
-            
-            // Convert to CSV
-            const csv = data.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-            
-            // Download CSV
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `workout-week-${week}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            alert('CSV downloaded! Import this into your Google Sheet.');
-        }
-        
-        // Initialize with Week 1 protocol
-        updateWeek();
-        
-        // PWA Installation
-        let deferredPrompt;
-        const installPrompt = document.getElementById('install-prompt');
-        const installBtn = document.getElementById('install-btn');
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installPrompt.style.display = 'block';
-        });
-        
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                deferredPrompt = null;
-                installPrompt.style.display = 'none';
-            }
-        });
-        
-        // Hide install prompt if already installed
-        window.addEventListener('appinstalled', () => {
-            installPrompt.style.display = 'none';
-        });
-        
-        // Auto-save to localStorage
-        function saveData() {
-            const inputs = document.querySelectorAll('input, select, textarea');
-            const data = {};
-            inputs.forEach((input, index) => {
+    });
+    localStorage.setItem('workoutData', JSON.stringify(data));
+}
+
+function loadData() {
+    const data = localStorage.getItem('workoutData');
+    if (data) {
+        const parsedData = JSON.parse(data);
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach((input, index) => {
+            if (parsedData[index] !== undefined) {
                 if (input.type === 'checkbox') {
-                    data[index] = input.checked;
+                    input.checked = parsedData[index];
                 } else {
-                    data[index] = input.value;
+                    input.value = parsedData[index];
                 }
-            });
-            localStorage.setItem('workoutData', JSON.stringify(data));
-        }
-        
-        function loadData() {
-            const data = localStorage.getItem('workoutData');
-            if (data) {
-                const parsedData = JSON.parse(data);
-                const inputs = document.querySelectorAll('input, select, textarea');
-                inputs.forEach((input, index) => {
-                    if (parsedData[index] !== undefined) {
-                        if (input.type === 'checkbox') {
-                            input.checked = parsedData[index];
-                        } else {
-                            input.value = parsedData[index];
-                        }
-                    }
-                });
             }
-        }
-        
-        // Add event listeners for auto-save and progress updates
-        document.addEventListener('DOMContentLoaded', function() {
-            loadData();
-            updateProgress();
-            addSyncListeners();
         });
-        
-        function addSyncListeners() {
-            const exercises = [
-                'Barbell Bench Press', 'Chest-Supported Row', 'Incline DB Press', 'Seated Cable Row', 'Cable Lateral Raise', 'Rope Pressdown',
-                'Back/Hack Squat', 'Romanian Deadlift', 'Bulgarian Split Squat', 'Leg Curl', 'Cable Crunch', 'Side Plank',
-                'Weighted Pull-up/Lat Pulldown', 'Overhead Press', 'Flat DB Press', 'Chest-Supported Row', 'Cable Lateral Raise', 'DB Hammer Curl', 'Overhead Cable Triceps'
-            ];
-            
-            const weightInputs = document.querySelectorAll('.weight-input');
-            const checkboxes = document.querySelectorAll('.completed-checkbox');
-            
-            weightInputs.forEach((input, index) => {
-                if (exercises[index]) {
-                    input.addEventListener('change', () => {
-                        const checkbox = checkboxes[index];
-                        syncToSheets(exercises[index], input.value, checkbox?.checked);
-                    });
-                }
-            });
-            
-            checkboxes.forEach((checkbox, index) => {
-                if (exercises[index]) {
-                    checkbox.addEventListener('change', () => {
-                        const weightInput = weightInputs[index];
-                        syncToSheets(exercises[index], weightInput?.value, checkbox.checked);
-                    });
-                }
+    }
+}
+
+function addSyncListeners() {
+    const exercises = [
+        'Barbell Bench Press', 'Chest-Supported Row', 'Incline DB Press', 'Seated Cable Row', 'Cable Lateral Raise', 'Rope Pressdown', 'Face Pulls (Optional)',
+        'Back/Hack Squat', 'Romanian Deadlift', 'Bulgarian Split Squat', 'Leg Curl', 'Cable Crunch', 'Side Plank',
+        'Weighted Pull-up/Lat Pulldown', 'Overhead Press', 'Flat DB Press', 'Chest-Supported Row', 'Cable Lateral Raise', 'DB Hammer Curl', 'Overhead Cable Triceps'
+    ];
+    
+    const weightInputs = document.querySelectorAll('.weight-input');
+    const checkboxes = document.querySelectorAll('.completed-checkbox');
+    
+    weightInputs.forEach((input, index) => {
+        if (exercises[index]) {
+            input.addEventListener('change', () => {
+                const checkbox = checkboxes[index];
+                syncToSheets(exercises[index], input.value, checkbox?.checked);
             });
         }
-        
-        document.addEventListener('input', function() {
-            saveData();
-            updateProgress();
-        });
-        document.addEventListener('change', function() {
-            saveData();
-            updateProgress();
-        });
-        
-        function updateProgress() {
-            const checkboxes = document.querySelectorAll('.completed-checkbox');
-            const weights = document.querySelectorAll('.weight-input');
-            
-            let completed = 0;
-            let totalVolume = 0;
-            let totalExercises = 0;
-            
-            checkboxes.forEach((checkbox, index) => {
-                if (checkbox.checked) {
-                    completed++;
-                    const weight = parseFloat(weights[index]?.value) || 0;
-                    totalVolume += weight * 10; // Rough volume estimate
-                }
-                totalExercises++;
+    });
+    
+    checkboxes.forEach((checkbox, index) => {
+        if (exercises[index]) {
+            checkbox.addEventListener('change', () => {
+                const weightInput = weightInputs[index];
+                syncToSheets(exercises[index], weightInput?.value, checkbox.checked);
             });
-            
-            const progressPercent = totalExercises > 0 ? (completed / totalExercises) * 100 : 0;
-            const consistencyRate = Math.round(progressPercent);
-            
-            // Update visual elements
-            document.getElementById('workouts-completed').textContent = completed;
-            document.getElementById('total-volume').textContent = Math.round(totalVolume);
-            document.getElementById('consistency-rate').textContent = consistencyRate + '%';
-            document.getElementById('week-progress').style.width = progressPercent + '%';
-            
-            // Update streak (simplified - you can enhance this)
-            const currentWeek = document.getElementById('week-select').value;
-            const streak = Math.max(0, parseInt(currentWeek) - 1);
-            document.getElementById('streak-badge').textContent = streak + ' week streak';
         }
-    </script>
+    });
+}
+
+function updateProgress() {
+    const checkboxes = document.querySelectorAll('.completed-checkbox');
+    const weights = document.querySelectorAll('.weight-input');
+    
+    let completed = 0;
+    let totalVolume = 0;
+    let totalExercises = 0;
+    
+    checkboxes.forEach((checkbox, index) => {
+        if (checkbox.checked) {
+            completed++;
+            const weight = parseFloat(weights[index]?.value) || 0;
+            totalVolume += weight * 10;
+        }
+        totalExercises++;
+    });
+    
+    const progressPercent = totalExercises > 0 ? (completed / totalExercises) * 100 : 0;
+    const consistencyRate = Math.round(progressPercent);
+    
+    document.getElementById('workouts-completed').textContent = completed;
+    document.getElementById('total-volume').textContent = Math.round(totalVolume);
+    document.getElementById('consistency-rate').textContent = consistencyRate + '%';
+    document.getElementById('week-progress').style.width = progressPercent + '%';
+    
+    const currentWeek = document.getElementById('week-select').value;
+    const streak = Math.max(0, parseInt(currentWeek) - 1);
+    document.getElementById('streak-badge').textContent = streak + ' week streak';
+}
+
+// Initialize everything
+updateWeek();
+
+// PWA Installation
+let deferredPrompt;
+const installPrompt = document.getElementById('install-prompt');
+const installBtn = document.getElementById('install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installPrompt.style.display = 'block';
+});
+
+installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        installPrompt.style.display = 'none';
+    }
+});
+
+window.addEventListener('appinstalled', () => {
+    installPrompt.style.display = 'none';
+});
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+    updateProgress();
+    addSyncListeners();
+});
+
+document.addEventListener('input', function() {
+    saveData();
+    updateProgress();
+});
+
+document.addEventListener('change', function() {
+    saveData();
+    updateProgress();
+});
+</script>
 </body>
 </html>
