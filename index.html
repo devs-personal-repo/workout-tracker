@@ -645,7 +645,7 @@
     </div>
     
     <script>
-        // Configuration - Your specific IDs
+        // REPLACE THIS WITH YOUR NEW APPS SCRIPT URL
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBQs4-RhWOW28fyjJ5lWBqmP0BkYO1fA_JiAge-IRww96nMfWIf2fNoXn9UWqxueE/exec';
         
         function showSyncStatus(message, isSuccess = true) {
@@ -659,6 +659,11 @@
         }
         
         function syncToSheets(exercise, weight, completed) {
+            if (GOOGLE_SCRIPT_URL === 'PUT_YOUR_NEW_APPS_SCRIPT_URL_HERE') {
+                showSyncStatus('Update Apps Script URL', false);
+                return;
+            }
+            
             const week = document.getElementById('week-select').value;
             const data = {
                 week: week,
@@ -699,9 +704,8 @@
             } else if (week == 7) {
                 intervalProtocol.innerHTML = '<p><strong>Deload Week:</strong> 4×2min easy @ RPE 6-7, 2min easy</p>';
             } else {
-                intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 4×4min hard, 2
-                    } else {
-                intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 4×4min hard, 2min easy</p>';
+                intervalProtocol.innerHTML = '
+intervalProtocol.innerHTML = '<p><strong>Current Protocol:</strong> 4×4min hard, 2min easy</p>';
             }
         }
         
