@@ -251,8 +251,57 @@
             display: block;
         }
         
-        .download-btn:hover {
-            background: #2980b9;
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .workout-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .stat-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #3498db;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .streak-badge {
+            display: inline-block;
+            background: #f39c12;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
         }
     </style>
 </head>
@@ -263,7 +312,27 @@
             <button id="install-btn" class="install-btn">Install</button>
         </div>
         
-        <h1>Weekly Workout Tracker</h1>
+        <h1>Weekly Workout Tracker <span id="streak-badge" class="streak-badge">0 week streak</span></h1>
+        
+        <div class="workout-stats">
+            <div class="stat-item">
+                <div class="stat-value" id="workouts-completed">0</div>
+                <div class="stat-label">Workouts Done</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="total-volume">0</div>
+                <div class="stat-label">Total Volume (kg)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="consistency-rate">0%</div>
+                <div class="stat-label">Consistency</div>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="week-progress"></div>
+        </div>
+        <p style="text-align: center; margin: 5px 0; color: #7f8c8d; font-size: 14px;">Weekly Progress</p>
         
         <div class="week-selector">
             <label for="week-select"><strong>Select Week: </strong></label>
@@ -564,6 +633,7 @@
         </div>
         
         <button class="download-btn" onclick="saveAsHTML()">Save This Week's Data</button>
+        <button class="download-btn" onclick="exportToSheets()" style="background: #27ae60;">Export to Sheets</button>
     </div>
     
     <script>
@@ -582,18 +652,67 @@
             }
         }
         
-        function saveAsHTML() {
-            const htmlContent = document.documentElement.outerHTML;
-            const blob = new Blob([htmlContent], { type: 'text/html' });
+        // Google Sheets Configuration
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDrZyKIm0kRuomvyCKKOF1mLaavh2-rp9Ulv3JDNdfF79sdncM_pXrt7ksYSa6N_0/exec'; // Replace with your Apps Script URL
+        
+        function syncToSheets(exercise, weight, completed) {
+            const week = document.getElementById('week-select').value;
+            const data = {
+                week: week,
+                day: exercise.includes('Bench') || exercise.includes('Row') || exercise.includes('Incline') ? 'Monday' :
+                     exercise.includes('Squat') || exercise.includes('Deadlift') || exercise.includes('Bulgarian') ? 'Wednesday' : 'Friday',
+                exercise: exercise,
+                weight: weight || 0,
+                completed: completed ? 'Yes' : 'No'
+            };
+            
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).catch(err => console.log('Sync failed:', err));
+        }
+            const week = document.getElementById('week-select').value;
+            const data = [];
+            
+            // Header row
+            data.push(['Week', 'Day', 'Exercise', 'Weight_kg', 'Completed', 'Notes']);
+            
+            // Collect workout data
+            const workouts = [
+                { day: 'Monday', exercises: ['Barbell Bench Press', 'Chest-Supported Row', 'Incline DB Press', 'Seated Cable Row', 'Cable Lateral Raise', 'Rope Pressdown'] },
+                { day: 'Wednesday', exercises: ['Back/Hack Squat', 'Romanian Deadlift', 'Bulgarian Split Squat', 'Leg Curl', 'Cable Crunch', 'Side Plank'] },
+                { day: 'Friday', exercises: ['Weighted Pull-up/Lat Pulldown', 'Overhead Press', 'Flat DB Press', 'Chest-Supported Row', 'Cable Lateral Raise', 'DB Hammer Curl', 'Overhead Cable Triceps'] }
+            ];
+            
+            const weightInputs = document.querySelectorAll('.weight-input');
+            const checkboxes = document.querySelectorAll('.completed-checkbox');
+            let inputIndex = 0;
+            
+            workouts.forEach(workout => {
+                workout.exercises.forEach(exercise => {
+                    const weight = weightInputs[inputIndex]?.value || '';
+                    const completed = checkboxes[inputIndex]?.checked ? 'Yes' : 'No';
+                    data.push([week, workout.day, exercise, weight, completed, '']);
+                    inputIndex++;
+                });
+            });
+            
+            // Convert to CSV
+            const csv = data.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+            
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            const week = document.getElementById('week-select').value;
             a.href = url;
-            a.download = `workout-tracker-week-${week}.html`;
+            a.download = `workout-week-${week}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            
+            alert('CSV downloaded! Import this into your Google Sheet.');
         }
         
         // Initialize with Week 1 protocol
@@ -655,10 +774,82 @@
             }
         }
         
-        // Add event listeners for auto-save
-        document.addEventListener('DOMContentLoaded', loadData);
-        document.addEventListener('input', saveData);
-        document.addEventListener('change', saveData);
+        // Add event listeners for auto-save and progress updates
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            updateProgress();
+            addSyncListeners();
+        });
+        
+        function addSyncListeners() {
+            const exercises = [
+                'Barbell Bench Press', 'Chest-Supported Row', 'Incline DB Press', 'Seated Cable Row', 'Cable Lateral Raise', 'Rope Pressdown',
+                'Back/Hack Squat', 'Romanian Deadlift', 'Bulgarian Split Squat', 'Leg Curl', 'Cable Crunch', 'Side Plank',
+                'Weighted Pull-up/Lat Pulldown', 'Overhead Press', 'Flat DB Press', 'Chest-Supported Row', 'Cable Lateral Raise', 'DB Hammer Curl', 'Overhead Cable Triceps'
+            ];
+            
+            const weightInputs = document.querySelectorAll('.weight-input');
+            const checkboxes = document.querySelectorAll('.completed-checkbox');
+            
+            weightInputs.forEach((input, index) => {
+                if (exercises[index]) {
+                    input.addEventListener('change', () => {
+                        const checkbox = checkboxes[index];
+                        syncToSheets(exercises[index], input.value, checkbox?.checked);
+                    });
+                }
+            });
+            
+            checkboxes.forEach((checkbox, index) => {
+                if (exercises[index]) {
+                    checkbox.addEventListener('change', () => {
+                        const weightInput = weightInputs[index];
+                        syncToSheets(exercises[index], weightInput?.value, checkbox.checked);
+                    });
+                }
+            });
+        }
+        
+        document.addEventListener('input', function() {
+            saveData();
+            updateProgress();
+        });
+        document.addEventListener('change', function() {
+            saveData();
+            updateProgress();
+        });
+        
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('.completed-checkbox');
+            const weights = document.querySelectorAll('.weight-input');
+            
+            let completed = 0;
+            let totalVolume = 0;
+            let totalExercises = 0;
+            
+            checkboxes.forEach((checkbox, index) => {
+                if (checkbox.checked) {
+                    completed++;
+                    const weight = parseFloat(weights[index]?.value) || 0;
+                    totalVolume += weight * 10; // Rough volume estimate
+                }
+                totalExercises++;
+            });
+            
+            const progressPercent = totalExercises > 0 ? (completed / totalExercises) * 100 : 0;
+            const consistencyRate = Math.round(progressPercent);
+            
+            // Update visual elements
+            document.getElementById('workouts-completed').textContent = completed;
+            document.getElementById('total-volume').textContent = Math.round(totalVolume);
+            document.getElementById('consistency-rate').textContent = consistencyRate + '%';
+            document.getElementById('week-progress').style.width = progressPercent + '%';
+            
+            // Update streak (simplified - you can enhance this)
+            const currentWeek = document.getElementById('week-select').value;
+            const streak = Math.max(0, parseInt(currentWeek) - 1);
+            document.getElementById('streak-badge').textContent = streak + ' week streak';
+        }
     </script>
 </body>
 </html>
