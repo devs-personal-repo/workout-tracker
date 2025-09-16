@@ -655,16 +655,70 @@
         // Google Sheets Configuration
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDrZyKIm0kRuomvyCKKOF1mLaavh2-rp9Ulv3JDNdfF79sdncM_pXrt7ksYSa6N_0/exec'; // Replace with your Apps Script URL
         
-        function syncToSheets(exercise, weight, completed) {
-            const week = document.getElementById('week-select').value;
-            const data = {
-                week: week,
-                day: exercise.includes('Bench') || exercise.includes('Row') || exercise.includes('Incline') ? 'Monday' :
-                     exercise.includes('Squat') || exercise.includes('Deadlift') || exercise.includes('Bulgarian') ? 'Wednesday' : 'Friday',
-                exercise: exercise,
-                weight: weight || 0,
-                completed: completed ? 'Yes' : 'No'
-            };
+       function syncToSheets(exercise, weight, completed) {
+    const week = document.getElementById('week-select').value;
+    const data = {
+        week: week,
+        day: exercise.includes('Bench') || exercise.includes('Row') || exercise.includes('Incline') ? 'Monday' :
+             exercise.includes('Squat') || exercise.includes('Deadlift') || exercise.includes('Bulgarian') ? 'Wednesday' : 'Friday',
+        exercise: exercise,
+        weight: weight || 0,
+        completed: completed ? 'Yes' : 'No'
+    };
+    
+    console.log('Syncing data:', data); // Debug line
+    
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        console.log('Sync response:', response.status);
+        return response.text();
+    })
+    .then(text => console.log('Response text:', text))
+    .catch(err => console.log('Sync failed:', err));
+}
+
+function exportToSheets() {
+    const week = document.getElementById('week-select').value;
+    const data = [];
+    
+    data.push(['Week', 'Day', 'Exercise', 'Weight_kg', 'Completed', 'Notes']);
+    
+    const workouts = [
+        { day: 'Monday', exercises: ['Barbell Bench Press', 'Chest-Supported Row', 'Incline DB Press', 'Seated Cable Row', 'Cable Lateral Raise', 'Rope Pressdown'] },
+        { day: 'Wednesday', exercises: ['Back/Hack Squat', 'Romanian Deadlift', 'Bulgarian Split Squat', 'Leg Curl', 'Cable Crunch', 'Side Plank'] },
+        { day: 'Friday', exercises: ['Weighted Pull-up/Lat Pulldown', 'Overhead Press', 'Flat DB Press', 'Chest-Supported Row', 'Cable Lateral Raise', 'DB Hammer Curl', 'Overhead Cable Triceps'] }
+    ];
+    
+    const weightInputs = document.querySelectorAll('.weight-input');
+    const checkboxes = document.querySelectorAll('.completed-checkbox');
+    let inputIndex = 0;
+    
+    workouts.forEach(workout => {
+        workout.exercises.forEach(exercise => {
+            const weight = weightInputs[inputIndex]?.value || '';
+            const completed = checkboxes[inputIndex]?.checked ? 'Yes' : 'No';
+            data.push([week, workout.day, exercise, weight, completed, '']);
+            inputIndex++;
+        });
+    });
+    
+    const csv = data.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `workout-week-${week}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert('CSV downloaded! Import this into your Google Sheet.');
+}
             
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
